@@ -1,0 +1,36 @@
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+secrets.json
+*.key
+*.pem
+
+# Python & Build Caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# System & Editor Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Local Model Weights, Vector Data & Persistent Volumes
+/data/
+/models/
+/ollama/
+*.gguf
+*.safetensors
