@@ -1,4 +1,4 @@
-ai-stack // standard models
+# ai-stack // standard models
 
 services:
   ollama:
