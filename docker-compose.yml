@@ -1,13 +1,25 @@
+version: '3.8'
+
+networks:
+  ai_internal:
+    driver: bridge
+
 services:
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:0.5.7
     container_name: ollama
+    restart: unless-stopped
+    networks:
+      - ai_internal
+    ipc: host
     dns:
       - 8.8.8.8
       - 1.1.1.1
     environment:
       - OLLAMA_KEEP_ALIVE=-1
       - OLLAMA_SCHED_SPREAD=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_NUM_PARALLEL=2
     volumes:
       - /mnt/models/ollama:/root/.ollama
     deploy:
@@ -17,22 +29,48 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 300s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   chromadb:
     image: chromadb/chroma:latest
     container_name: chromadb
+    restart: unless-stopped
+    networks:
+      - ai_internal
     volumes:
       - chroma_data:/chroma/chroma
     environment:
       - IS_PERSISTENT=TRUE
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v2/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
   odysseus:
     build:
       context: ../odysseus
       dockerfile: Dockerfile
     container_name: odysseus
+    restart: unless-stopped
+    networks:
+      - ai_internal
     ports:
       - "3000:7000"
     environment:
@@ -43,9 +81,15 @@ services:
     volumes:
       - odysseus_data:/app/data
     depends_on:
-      - ollama
-      - chromadb
-    restart: unless-stopped
+      ollama:
+        condition: service_healthy
+      chromadb:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
 
 volumes:
   odysseus_data:
